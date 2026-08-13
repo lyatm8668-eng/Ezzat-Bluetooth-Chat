@@ -643,62 +643,262 @@ fun DeviceCard(
     selected: Boolean,
     onClick: () -> Unit
 ) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+            .border(
+                width = if (selected) 1.dp else 0.dp,
+                color = if (selected) Color(0xFF1688FF) else Color.Transparent,
+                shape = RoundedCornerShape(19.dp)
+            ),
+        shape = RoundedCornerShape(19.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (selected) {
+                Color(0x332288FF)
+            } else {
+                Color(0xCC111B30)
+            }
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
 
-        } catch (_: SecurityException) {
-        "عنوان غير متاح"
+            Box(
+                modifier = Modifier
+                    .size(50.dp)
+                    .clip(CircleShape)
+                    .background(Color(0x221688FF)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "ᛒ",
+                    color = Color(0xFF3DA3FF),
+                    fontSize = 27.sp
+                )
+            }
+
+            Spacer(modifier = Modifier.width(14.dp))
+
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    text = try {
+                        device.name ?: "جهاز Bluetooth"
+                    } catch (_: SecurityException) {
+                        "جهاز Bluetooth"
+                    },
+                    color = Color.White,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Text(
+                    text = try {
+                        device.address
+                    } catch (_: SecurityException) {
+                        "عنوان غير متاح"
+                    },
+                    color = Color(0xFF7185A7),
+                    fontSize = 11.sp
+                )
+            }
+
+            Text(
+                text = if (selected) "✓" else "›",
+                color = Color(0xFF3DA3FF),
+                fontSize = 27.sp
+            )
+        }
     }
+}
 
-    Text(
-        text = "الجهاز المحدد",
-        color = Color(0xFF7EA9D9),
-        fontSize = 12.sp
-    )
-
-    Spacer(modifier = Modifier.height(6.dp))
-
-    Text(
-        text = deviceName,
-        color = Color.White,
-        fontSize = 20.sp,
-        fontWeight = FontWeight.Bold
-    )
-
-    Spacer(modifier = Modifier.height(6.dp))
-
-    Text(
-        text = deviceAddress,
-        color = Color(0xFF7185A7),
-        fontSize = 12.sp
-    )
-
-    Spacer(modifier = Modifier.height(18.dp))
-
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
+@Composable
+fun EmptyDevices() {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 45.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
 
-        Button(
-            onClick = onClose,
-            modifier = Modifier.weight(1f),
-            shape = RoundedCornerShape(15.dp)
+        Box(
+            modifier = Modifier
+                .size(90.dp)
+                .clip(CircleShape)
+                .background(Color(0x221688FF)),
+            contentAlignment = Alignment.Center
         ) {
-            Text("إغلاق")
+            Text(
+                text = "ᛒ",
+                color = Color(0xFF3DA3FF),
+                fontSize = 48.sp
+            )
         }
 
-        Button(
-            onClick = {
-                // الاتصال بالجهاز سيتم إضافته هنا
-            },
-            modifier = Modifier.weight(1f),
-            shape = RoundedCornerShape(15.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFF1688FF)
+        Spacer(modifier = Modifier.height(18.dp))
+
+        Text(
+            text = "لا توجد أجهزة حتى الآن",
+            color = Color.White,
+            fontSize = 17.sp,
+            fontWeight = FontWeight.Bold
+        )
+
+        Spacer(modifier = Modifier.height(7.dp))
+
+        Text(
+            text = "اضغط على زر البحث للعثور على أجهزة Bluetooth",
+            color = Color(0xFF7185A7),
+            fontSize = 12.sp,
+            textAlign = TextAlign.Center
+        )
+    }
+}
+
+@SuppressLint("MissingPermission")
+@Composable
+fun ConnectionBottomCard(
+    device: BluetoothDevice,
+    onClose: () -> Unit
+) {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.BottomCenter
+    ) {
+
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            shape = RoundedCornerShape(26.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = Color(0xFF121E36)
             )
         ) {
-            Text("اتصال")
+
+            Column(
+                modifier = Modifier.padding(20.dp)
+            ) {
+
+                Text(
+                    text = "الجهاز المحدد",
+                    color = Color(0xFF7EA9D9),
+                    fontSize = 12.sp
+                )
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                Text(
+                    text = try {
+                        device.name ?: "جهاز Bluetooth"
+                    } catch (_: SecurityException) {
+                        "جهاز Bluetooth"
+                    },
+                    color = Color.White,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                Text(
+                    text = try {
+                        device.address
+                    } catch (_: SecurityException) {
+                        "عنوان غير متاح"
+                    },
+                    color = Color(0xFF7185A7),
+                    fontSize = 12.sp
+                )
+
+                Spacer(modifier = Modifier.height(18.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+
+                    Button(
+                        onClick = onClose,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(15.dp)
+                    ) {
+                        Text("إغلاق")
+                    }
+
+                    Button(
+                        onClick = {
+                            // الاتصال سيتم تطويره في الخطوة التالية
+                        },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(15.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFF1688FF)
+                        )
+                    ) {
+                        Text("اتصال")
+                    }
+                }
+            }
         }
     }
 }
-}
+
+@Composable
+fun DecorativeBackground() {
+    val infiniteTransition = rememberInfiniteTransition(
+        label = "background"
+    )
+
+    val alpha by infiniteTransition.animateFloat(
+        initialValue = 0.12f,
+        targetValue = 0.30f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(
+                durationMillis = 2500,
+                easing = LinearEasing
+            ),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "alpha"
+    )
+
+    Canvas(
+        modifier = Modifier.fillMaxSize()
+    ) {
+
+        drawCircle(
+            brush = Brush.radialGradient(
+                colors = listOf(
+                    Color(0xFF1688FF).copy(alpha = alpha),
+                    Color.Transparent
+                )
+            ),
+            radius = 350f,
+            center = androidx.compose.ui.geometry.Offset(
+                size.width * 0.15f,
+                size.height * 0.15f
+            )
+        )
+
+        drawCircle(
+            brush = Brush.radialGradient(
+                colors = listOf(
+                    Color(0xFF6A35FF).copy(alpha = alpha),
+                    Color.Transparent
+                )
+            ),
+            radius = 450f,
+            center = androidx.compose.ui.geometry.Offset(
+                size.width * 0.9f,
+                size.height * 0.75f
+            )
+        )
+    }
 }
