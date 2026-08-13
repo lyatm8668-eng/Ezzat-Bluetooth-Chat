@@ -719,7 +719,7 @@ fun DeviceCard(
 }
 
 @Composable
-fun EmptyDevices() {
+fun EmptyDevices(scanning: Boolean) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -753,7 +753,10 @@ fun EmptyDevices() {
         Spacer(modifier = Modifier.height(7.dp))
 
         Text(
-            text = "اضغط على زر البحث للعثور على أجهزة Bluetooth",
+            text = if (scanning)
+                "يتم البحث عن الأجهزة المتاحة حولك..."
+            else
+                "اضغط على زر البحث للعثور على أجهزة Bluetooth",
             color = Color(0xFF7185A7),
             fontSize = 12.sp,
             textAlign = TextAlign.Center
