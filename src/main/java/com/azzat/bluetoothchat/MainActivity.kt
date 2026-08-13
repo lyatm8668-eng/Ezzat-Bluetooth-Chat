@@ -1,3 +1,4 @@
+
 package com.azzat.bluetoothchat
 
 import android.Manifest
@@ -37,6 +38,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -109,20 +111,49 @@ fun BluetoothChatApp(context: Context) {
         mutableStateListOf<BluetoothDevice>()
     }
 
+    fun startBluetoothDiscovery() {
+
+        if (bluetoothAdapter == null) return
+
+        try {
+            if (!bluetoothAdapter.isEnabled) {
+                context.startActivity(
+                    Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
+                )
+                return
+            }
+
+            if (bluetoothAdapter.isDiscovering) {
+                bluetoothAdapter.cancelDiscovery()
+            }
+
+            devices.clear()
+            bluetoothAdapter.startDiscovery()
+            scanning = true
+
+        } catch (_: SecurityException) {
+            scanning = false
+        } catch (_: Exception) {
+            scanning = false
+        }
+    }
+
     val permissionLauncher =
         rememberLauncherForActivityResult(
             ActivityResultContracts.RequestMultiplePermissions()
         ) { result ->
 
-            val connectGranted =
+            val granted =
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    result[Manifest.permission.BLUETOOTH_CONNECT] == true
+                    result[Manifest.permission.BLUETOOTH_SCAN] == true &&
+                            result[Manifest.permission.BLUETOOTH_CONNECT] == true
                 } else {
-                    true
+                    result[Manifest.permission.ACCESS_FINE_LOCATION] == true
                 }
 
-            if (connectGranted) {
+            if (granted) {
                 bluetoothEnabled = bluetoothAdapter?.isEnabled == true
+                startBluetoothDiscovery()
             }
         }
 
@@ -130,20 +161,46 @@ fun BluetoothChatApp(context: Context) {
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
 
-            permissionLauncher.launch(
-                arrayOf(
-                    Manifest.permission.BLUETOOTH_SCAN,
+            val scanGranted =
+                ContextCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.BLUETOOTH_SCAN
+                ) == PackageManager.PERMISSION_GRANTED
+
+            val connectGranted =
+                ContextCompat.checkSelfPermission(
+                    context,
                     Manifest.permission.BLUETOOTH_CONNECT
+                ) == PackageManager.PERMISSION_GRANTED
+
+            if (scanGranted && connectGranted) {
+                startBluetoothDiscovery()
+            } else {
+                permissionLauncher.launch(
+                    arrayOf(
+                        Manifest.permission.BLUETOOTH_SCAN,
+                        Manifest.permission.BLUETOOTH_CONNECT
+                    )
                 )
-            )
+            }
 
         } else {
 
-            permissionLauncher.launch(
-                arrayOf(
+            val locationGranted =
+                ContextCompat.checkSelfPermission(
+                    context,
                     Manifest.permission.ACCESS_FINE_LOCATION
+                ) == PackageManager.PERMISSION_GRANTED
+
+            if (locationGranted) {
+                startBluetoothDiscovery()
+            } else {
+                permissionLauncher.launch(
+                    arrayOf(
+                        Manifest.permission.ACCESS_FINE_LOCATION
+                    )
                 )
-            )
+            }
         }
     }
 
@@ -162,21 +219,34 @@ fun BluetoothChatApp(context: Context) {
 
                         val device =
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+
                                 intent.getParcelableExtra(
                                     BluetoothDevice.EXTRA_DEVICE,
                                     BluetoothDevice::class.java
                                 )
+
                             } else {
+
                                 @Suppress("DEPRECATION")
                                 intent.getParcelableExtra(
                                     BluetoothDevice.EXTRA_DEVICE
                                 )
                             }
 
-                        if (device != null &&
-                            devices.none { it.address == device.address }
-                        ) {
-                            devices.add(device)
+                        if (device != null) {
+
+                            try {
+
+                                if (
+                                    devices.none {
+                                        it.address == device.address
+                                    }
+                                ) {
+                                    devices.add(device)
+                                }
+
+                            } catch (_: SecurityException) {
+                            }
                         }
                     }
 
@@ -186,8 +256,11 @@ fun BluetoothChatApp(context: Context) {
 
                     BluetoothAdapter.ACTION_STATE_CHANGED -> {
 
-                        bluetoothEnabled =
-                            bluetoothAdapter?.isEnabled == true
+                        try {
+                            bluetoothEnabled =
+                                bluetoothAdapter?.isEnabled == true
+                        } catch (_: SecurityException) {
+                        }
                     }
                 }
             }
@@ -207,7 +280,11 @@ fun BluetoothChatApp(context: Context) {
         )
 
         onDispose {
-            context.unregisterReceiver(receiver)
+
+            try {
+                context.unregisterReceiver(receiver)
+            } catch (_: Exception) {
+            }
         }
     }
 
@@ -217,10 +294,10 @@ fun BluetoothChatApp(context: Context) {
 
             try {
 
-                val bonded = bluetoothAdapter.bondedDevices
+                val bondedDevices = bluetoothAdapter.bondedDevices
 
                 devices.clear()
-                devices.addAll(bonded)
+                devices.addAll(bondedDevices)
 
             } catch (_: SecurityException) {
             }
@@ -228,9 +305,9 @@ fun BluetoothChatApp(context: Context) {
     }
 
     val background = Brush.verticalGradient(
-        listOf(
-            Color(0xFF050816),
-            Color(0xFF0A1025),
+        colors = listOf(
+            Color(0xFF030712),
+            Color(0xFF08142B),
             Color(0xFF050816)
         )
     )
@@ -254,56 +331,31 @@ fun BluetoothChatApp(context: Context) {
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(horizontal = 20.dp)
+                        .navigationBarsPadding()
                 ) {
 
-                    Spacer(modifier = Modifier.height(35.dp))
+                    Spacer(
+                        modifier = Modifier.height(28.dp)
+                    )
 
                     Header()
 
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(
+                        modifier = Modifier.height(22.dp)
+                    )
 
                     StatusCard(
                         enabled = bluetoothEnabled,
                         scanning = scanning
                     )
 
-                    Spacer(modifier = Modifier.height(20.dp))
+                    Spacer(
+                        modifier = Modifier.height(18.dp)
+                    )
 
                     Button(
                         onClick = {
-
                             requestBluetoothPermissions()
-
-                            if (bluetoothAdapter == null) return@Button
-
-                            if (!bluetoothEnabled) {
-
-                                try {
-                                    context.startActivity(
-                                        Intent(
-                                            BluetoothAdapter.ACTION_REQUEST_ENABLE
-                                        )
-                                    )
-                                } catch (_: Exception) {
-                                }
-
-                            } else {
-
-                                try {
-
-                                    if (bluetoothAdapter.isDiscovering) {
-                                        bluetoothAdapter.cancelDiscovery()
-                                    }
-
-                                    devices.clear()
-
-                                    bluetoothAdapter.startDiscovery()
-
-                                    scanning = true
-
-                                } catch (_: SecurityException) {
-                                }
-                            }
                         },
                         modifier = Modifier
                             .fillMaxWidth()
@@ -315,26 +367,44 @@ fun BluetoothChatApp(context: Context) {
                     ) {
 
                         Text(
-                            text = if (scanning) {
-                                "🔎  جارٍ البحث عن الأجهزة..."
-                            } else {
-                                "⚡  البحث عن أجهزة Bluetooth"
-                            },
+                            text =
+                                if (scanning)
+                                    "🔎  جارٍ البحث..."
+                                else
+                                    "⚡  البحث عن أجهزة Bluetooth",
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(24.dp))
-
-                    Text(
-                        text = "الأجهزة القريبة",
-                        color = Color.White,
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold
+                    Spacer(
+                        modifier = Modifier.height(22.dp)
                     )
 
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+
+                        Text(
+                            text = "الأجهزة القريبة",
+                            color = Color.White,
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            modifier = Modifier.weight(1f)
+                        )
+
+                        Text(
+                            text = "${devices.size}",
+                            color = Color(0xFF4EA7FF),
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    Spacer(
+                        modifier = Modifier.height(8.dp)
+                    )
 
                     AnimatedVisibility(
                         visible = scanning,
@@ -343,33 +413,51 @@ fun BluetoothChatApp(context: Context) {
                     ) {
 
                         Text(
-                            text = "يتم البحث بطريقة آمنة عن الأجهزة المتاحة...",
-                            color = Color(0xFF8EA7C7),
-                            fontSize = 13.sp
+                            text = "يتم البحث عن الأجهزة المتاحة حولك...",
+                            color = Color(0xFF8197B8),
+                            fontSize = 12.sp
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(
+                        modifier = Modifier.height(10.dp)
+                    )
 
                     if (devices.isEmpty()) {
 
-                        EmptyDevices()
+                        EmptyDevices(
+                            scanning = scanning
+                        )
 
                     } else {
 
                         LazyColumn(
-                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                            modifier = Modifier.fillMaxSize(),
+                            verticalArrangement =
+                                Arrangement.spacedBy(10.dp)
                         ) {
 
                             items(
                                 items = devices,
-                                key = { it.address }
+                                key = {
+                                    try {
+                                        it.address
+                                    } catch (_: Exception) {
+                                        it.hashCode()
+                                    }
+                                }
                             ) { device ->
 
                                 DeviceCard(
                                     device = device,
-                                    selected = selectedDevice?.address ==
-                                            device.address,
+                                    selected =
+                                        selectedDevice?.let {
+                                            try {
+                                                it.address == device.address
+                                            } catch (_: Exception) {
+                                                false
+                                            }
+                                        } == true,
                                     onClick = {
                                         selectedDevice = device
                                     }
@@ -379,14 +467,21 @@ fun BluetoothChatApp(context: Context) {
                     }
                 }
 
-                if (selectedDevice != null) {
+                AnimatedVisibility(
+                    visible = selectedDevice != null,
+                    enter = fadeIn(),
+                    exit = fadeOut()
+                ) {
 
-                    ConnectionBottomCard(
-                        device = selectedDevice!!,
-                        onClose = {
-                            selectedDevice = null
-                        }
-                    )
+                    selectedDevice?.let { device ->
+
+                        ConnectionBottomCard(
+                            device = device,
+                            onClose = {
+                                selectedDevice = null
+                            }
+                        )
+                    }
                 }
             }
         }
@@ -403,13 +498,13 @@ fun Header() {
 
         Box(
             modifier = Modifier
-                .size(58.dp)
-                .clip(RoundedCornerShape(17.dp))
+                .size(60.dp)
+                .clip(RoundedCornerShape(18.dp))
                 .background(
                     Brush.linearGradient(
-                        listOf(
+                        colors = listOf(
                             Color(0xFF1688FF),
-                            Color(0xFF6A35FF)
+                            Color(0xFF7138FF)
                         )
                     )
                 ),
@@ -419,25 +514,27 @@ fun Header() {
             Text(
                 text = "ᛒ",
                 color = Color.White,
-                fontSize = 35.sp,
-                fontWeight = FontWeight.Bold
+                fontSize = 37.sp,
+                fontWeight = FontWeight.ExtraBold
             )
         }
 
-        Spacer(modifier = Modifier.width(14.dp))
+        Spacer(
+            modifier = Modifier.width(14.dp)
+        )
 
         Column {
 
             Text(
                 text = "عزت السراء",
                 color = Color.White,
-                fontSize = 23.sp,
+                fontSize = 24.sp,
                 fontWeight = FontWeight.ExtraBold
             )
 
             Text(
                 text = "Bluetooth Chat",
-                color = Color(0xFF7EA9D9),
+                color = Color(0xFF78A7DC),
                 fontSize = 13.sp
             )
         }
@@ -454,7 +551,7 @@ fun StatusCard(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(22.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color(0xCC101A32)
+            containerColor = Color(0xCC0D1930)
         )
     ) {
 
@@ -467,13 +564,13 @@ fun StatusCard(
 
             Box(
                 modifier = Modifier
-                    .size(48.dp)
+                    .size(50.dp)
                     .clip(CircleShape)
                     .background(
                         if (enabled)
                             Color(0x3325E6A4)
                         else
-                            Color(0x33FF5B6E)
+                            Color(0x33FF5067)
                     ),
                 contentAlignment = Alignment.Center
             ) {
@@ -484,13 +581,15 @@ fun StatusCard(
                         if (enabled)
                             Color(0xFF25E6A4)
                         else
-                            Color(0xFFFF5B6E),
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold
+                            Color(0xFFFF5067),
+                    fontSize = 25.sp,
+                    fontWeight = FontWeight.ExtraBold
                 )
             }
 
-            Spacer(modifier = Modifier.width(14.dp))
+            Spacer(
+                modifier = Modifier.width(14.dp)
+            )
 
             Column(
                 modifier = Modifier.weight(1f)
@@ -499,7 +598,7 @@ fun StatusCard(
                 Text(
                     text =
                         if (enabled)
-                            "Bluetooth متصل"
+                            "Bluetooth مفعّل"
                         else
                             "Bluetooth غير مفعّل",
                     color = Color.White,
@@ -507,16 +606,32 @@ fun StatusCard(
                     fontWeight = FontWeight.Bold
                 )
 
+                Spacer(
+                    modifier = Modifier.height(3.dp)
+                )
+
                 Text(
                     text =
                         if (scanning)
                             "البحث جارٍ الآن..."
                         else
-                            "جاهز للاتصال بالأجهزة",
-                    color = Color(0xFF8195B5),
+                            "جاهز للبحث والاتصال",
+                    color = Color(0xFF8197B8),
                     fontSize = 12.sp
                 )
             }
+
+            Box(
+                modifier = Modifier
+                    .size(9.dp)
+                    .clip(CircleShape)
+                    .background(
+                        if (enabled)
+                            Color(0xFF25E6A4)
+                        else
+                            Color(0xFFFF5067)
+                    )
+            )
         }
     }
 }
@@ -529,153 +644,12 @@ fun DeviceCard(
     onClick: () -> Unit
 ) {
 
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable {
-                onClick()
-            }
-            .border(
-                width = if (selected) 1.dp else 0.dp,
-                color = Color(0xFF1688FF),
-                shape = RoundedCornerShape(19.dp)
-            ),
-        shape = RoundedCornerShape(19.dp),
-        colors = CardDefaults.cardColors(
-            containerColor =
-                if (selected)
-                    Color(0x332288FF)
-                else
-                    Color(0xCC111B30)
-        )
-    ) {
-
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-
-            Box(
-                modifier = Modifier
-                    .size(50.dp)
-                    .clip(CircleShape)
-                    .background(Color(0x221688FF)),
-                contentAlignment = Alignment.Center
-            ) {
-
-                Text(
-                    text = "ᛒ",
-                    color = Color(0xFF3DA3FF),
-                    fontSize = 27.sp
-                )
-            }
-
-            Spacer(modifier = Modifier.width(14.dp))
-
-            Column(
-                modifier = Modifier.weight(1f)
-            ) {
-
-                Text(
-                    text = try {
-                        device.name ?: "جهاز Bluetooth"
-                    } catch (_: SecurityException) {
-                        "جهاز Bluetooth"
-                    },
-                    color = Color.White,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold
-                )
-
-                Text(
-                    text = try {
-                        device.address
-                    } catch (_: SecurityException) {
-                        "عنوان غير متاح"
-                    },
-                    color = Color(0xFF7185A7),
-                    fontSize = 11.sp
-                )
-            }
-
-            Text(
-                text = if (selected) "✓" else "›",
-                color = Color(0xFF3DA3FF),
-                fontSize = 27.sp
-            )
-        }
+    val deviceName = try {
+        device.name ?: "جهاز Bluetooth"
+    } catch (_: SecurityException) {
+        "جهاز Bluetooth"
     }
-}
 
-@Composable
-fun EmptyDevices() {
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 45.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-
-        Box(
-            modifier = Modifier
-                .size(90.dp)
-                .clip(CircleShape)
-                .background(Color(0x221688FF)),
-            contentAlignment = Alignment.Center
-        ) {
-
-            Text(
-                text = "ᛒ",
-                color = Color(0xFF3DA3FF),
-                fontSize = 48.sp
-            )
-        }
-
-        Spacer(modifier = Modifier.height(18.dp))
-
-        Text(
-            text = "لا توجد أجهزة حتى الآن",
-            color = Color.White,
-            fontSize = 17.sp,
-            fontWeight = FontWeight.Bold
-        )
-
-        Spacer(modifier = Modifier.height(7.dp))
-
-        Text(
-            text = "اضغط على زر البحث للعثور على أجهزة Bluetooth",
-            color = Color(0xFF7185A7),
-            fontSize = 12.sp,
-            textAlign = TextAlign.Center
-        )
-    }
-}
-
-@SuppressLint("MissingPermission")
-@Composable
-fun ConnectionBottomCard(
-    device: BluetoothDevice,
-    onClose: () -> Unit
-) {
-
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.BottomCenter
-    ) {
-
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(14.dp),
-            shape = RoundedCornerShape(26.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = Color(0xFF121E36)
-            )
-        ) {
-
-            Column(
-                modifier = Modifier.padding(20.dp)
-            )
+    val deviceAddress = try {
+        device.address
+    } c
