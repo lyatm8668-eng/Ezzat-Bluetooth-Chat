@@ -644,12 +644,61 @@ fun DeviceCard(
     onClick: () -> Unit
 ) {
 
-    val deviceName = try {
-        device.name ?: "جهاز Bluetooth"
-    } catch (_: SecurityException) {
-        "جهاز Bluetooth"
+        } catch (_: SecurityException) {
+        "عنوان غير متاح"
     }
 
-    val deviceAddress = try {
-        device.address
-    } c
+    Text(
+        text = "الجهاز المحدد",
+        color = Color(0xFF7EA9D9),
+        fontSize = 12.sp
+    )
+
+    Spacer(modifier = Modifier.height(6.dp))
+
+    Text(
+        text = deviceName,
+        color = Color.White,
+        fontSize = 20.sp,
+        fontWeight = FontWeight.Bold
+    )
+
+    Spacer(modifier = Modifier.height(6.dp))
+
+    Text(
+        text = deviceAddress,
+        color = Color(0xFF7185A7),
+        fontSize = 12.sp
+    )
+
+    Spacer(modifier = Modifier.height(18.dp))
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+
+        Button(
+            onClick = onClose,
+            modifier = Modifier.weight(1f),
+            shape = RoundedCornerShape(15.dp)
+        ) {
+            Text("إغلاق")
+        }
+
+        Button(
+            onClick = {
+                // الاتصال بالجهاز سيتم إضافته هنا
+            },
+            modifier = Modifier.weight(1f),
+            shape = RoundedCornerShape(15.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color(0xFF1688FF)
+            )
+        ) {
+            Text("اتصال")
+        }
+    }
+}
+}
+}
